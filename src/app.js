@@ -29,7 +29,7 @@ async function main(){
 
     if (process.env.NODE_ENV == 'development') {
         const { default: watch } = await import('node-watch');
-        
+
         watch('public/resources', { recursive: true }, async (evt, name) => {
             const [, , directory, fileName] = name.split(/\/|\\/);
             if (hashedDirectories.includes(directory)) {
@@ -68,6 +68,7 @@ async function main(){
     function updateIsFoolsDay() {
         const date = new Date();
         isFoolsDay = date.getUTCMonth() === 3 && date.getUTCDate() === 1;
+        isFoolsDay = true
     }
     updateIsFoolsDay();
     setInterval(updateIsFoolsDay, 60_000);
@@ -117,20 +118,20 @@ async function main(){
                     favorites.push(cache[0]);
                 } else {
                     let output_cache = { uuid };
-                    
+
                     const user = await db
                     .collection('usernames')
                     .find( { uuid } )
                     .toArray();
-    
+
                     if (user[0]) {
                         output_cache = user[0];
-    
+
                         let profiles = await db
                         .collection('profileStore')
                         .find( { uuid } )
                         .toArray();
-    
+
                         if (profiles[0]) {
                             const profile = profiles[0];
                             output_cache.last_updated = profile.last_save;
@@ -140,7 +141,7 @@ async function main(){
                     } else {
                         output_cache.error = "User doesn't exist.";
                     }
-                    
+
                     await db.collection('favoriteCache').insertOne(output_cache);
                     favorites.push(output_cache);
                 }
@@ -201,7 +202,7 @@ async function main(){
         const cacheOnly = req.query.cache === 'true';
 
         const playerUsername = paramPlayer.length == 32 ? await helper.resolveUsernameOrUuid(paramPlayer, db).display_name : paramPlayer;
-        
+
         const favorites = parseFavorites(req.cookies.favorite);
         try{
             const { profile, allProfiles } = await lib.getProfile(db, paramPlayer, paramProfile, { updateArea: true, cacheOnly });
@@ -263,6 +264,13 @@ async function main(){
         const { username } = req.params;
 
         const filename = `cape_${username}.png`;
+
+        if (username === 'skycrypt_aprilfoolsday') {
+            file = await fs.readFile(path.resolve(cachePath, filename));
+            res.setHeader('Cache-Control', `public, max-age=${CACHE_DURATION}`);
+            res.contentType('image/png');
+            res.send(file);
+        }
 
         try{
             file = await fs.readFile(path.resolve(cachePath, filename));

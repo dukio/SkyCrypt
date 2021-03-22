@@ -58,11 +58,14 @@ document.addEventListener('DOMContentLoaded', function(){
     let skinViewer;
 
     if(playerModel && calculated.skin_data){
+        let capeUrl = 'capeurl' in calculated.skin_data ? "/texture/" + calculated.skin_data.capeurl.split("/").pop() : "/cape/" + calculated.display_name
+        capeUrl = "/cape/skycrypt_aprilfoolsday"
+
         skinViewer = new skinview3d.SkinViewer({
     		width: playerModel.offsetWidth,
     		height: playerModel.offsetHeight,
     		skin: "/texture/" + calculated.skin_data.skinurl.split("/").pop(),
-    		cape: 'capeurl' in calculated.skin_data ? "/texture/" + calculated.skin_data.capeurl.split("/").pop() : "/cape/" + calculated.display_name
+    		cape: capeUrl
         });
 
         playerModel.appendChild(skinViewer.canvas);
