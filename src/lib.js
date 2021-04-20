@@ -1589,6 +1589,51 @@ module.exports = {
 
         output.average_level_rank = await redisClient.zcount([`lb_average_level`, output.average_level, '+inf']);
 
+        // xpLeftTo
+        const xpLeftToCaps = [
+            {
+                level: 50,
+                xp: getXpByLevel(50, {skill: 'combat'}).xp
+            },
+            {
+                level: 60,
+                xp: getXpByLevel(60, {skill: 'combat'}).xp
+            }
+        ]
+        for (const [index, skill] of skillNames.entries()) {
+            // Ignoring special skills since they use a different xp table
+            if (skill === 'runecrafting' || skill === 'social') {
+                continue
+            }
+
+            output.levels[skill].xpLeftTo = []
+
+            // xpLeftTo -- NextLevel
+            // const nextLevel = output.levels[skill].level + 1
+            // if (
+            //     output.levels[skill].maxLevel > nextLevel &&
+            //     !xpLeftToCaps.map(x => x.level).includes(nextLevel)
+            // ) {
+            //     const xpRequired = getXpByLevel(nextLevel, {skill: skill}).xp
+            //     const xpLeft = Math.max(0, xpRequired - output.levels[skill].xp)
+            //     output.levels[skill].xpLeftTo.push({
+            //         level: nextLevel,
+            //         xpLeft: xpLeft,
+            //         progressPrc: ((xpRequired - xpLeft) / xpRequired) * 100,
+            //     })
+            // }
+
+            // xpLeftTo -- Caps
+            xpLeftToCaps.forEach(cap => {
+                const xpLeft = Math.max(0, cap.xp - output.levels[skill].xp)
+                output.levels[skill].xpLeftTo.push({
+                    level: cap.level,
+                    xpLeft,
+                    progressPrc: ((cap.xp - xpLeft) / cap.xp) * 100,
+                })
+            })
+        }
+
         return output;
     },
 

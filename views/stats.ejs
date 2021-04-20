@@ -931,73 +931,6 @@ const inventorySlot = item => { %>
     </div>
 <% };
 
-// Copied from lib.js
-function getXpByLevel(level, extra = {}) {
-	let xp_table
-	switch (extra.type) {
-		case 'runecrafting':
-			xp_table = constants.runecrafting_xp
-			break
-		case 'dungeoneering':
-			xp_table = constants.dungeoneering_xp
-			break
-		default:
-			xp_table = constants.leveling_xp
-	}
-
-	let levelCap = 1
-	let maxLevel = 1
-
-	if (extra.skill) {
-		if (
-			constants.default_skill_caps[extra.skill] &&
-			constants.default_skill_caps[extra.skill] > levelCap
-		) {
-			levelCap = constants.default_skill_caps[extra.skill]
-		}
-
-		if (constants.maxed_skill_caps[extra.skill]) {
-			maxLevel = constants.maxed_skill_caps[extra.skill]
-		}
-	} else {
-		levelCap = Object.keys(xp_table)
-			.sort((a, b) => Number(a) - Number(b))
-			.map((a) => Number(a))
-			.pop()
-	}
-
-	if (levelCap > maxLevel) {
-		maxLevel = levelCap
-	}
-
-	const output = {
-		level: Math.min(level, maxLevel),
-		xpCurrent: 0,
-		xpForNext: null,
-		progress: 0.05,
-	}
-
-	if (isNaN(level)) {
-		return 0
-	}
-
-	let xpTotal = 0
-
-	for (let x = 1; x <= level; x++) {
-		xpTotal += xp_table[x]
-	}
-
-	output.xp = xpTotal
-
-	if (level >= maxLevel) {
-		output.progress = 1
-	} else {
-		output.xpForNext = xp_table[level + 1]
-	}
-
-	return output
-}
-
 const skill_component = (skill, icon, level, extra = {}) => { %>
     <div class="skill xp-skill<%= level.level == level.maxLevel ? ' maxed-skill' : ''%>">
         <div
@@ -1008,35 +941,37 @@ const skill_component = (skill, icon, level, extra = {}) => { %>
                 <% } %>
                 <span class='stat-name'>Total XP: </span><span class='stat-value'><%= Math.round(level.xp).toLocaleString() %></span><br>
 
-                <% if (level.level < 60) { %>
+                <% if (level.xpLeftTo || level.xpForNext) { %>
                     <br>
                 <% } %>
 
-                <% if (
-                    // ['taming', 'farming', 'mining', 'combat', 'foraging', 'fishing', 'enchanting', 'alchemy'].includes(skill.toLowerCase()) &&
-                    level.level < 50
-                ) { %>
-                    <span class='stat-name'>Progress to 50: </span>
-                    <span class='stat-value'><%= Math.max(0, Math.round(getXpByLevel(50, {skill}).xp - level.xp)).toLocaleString() %></span><br>
+                <% if (level.xpForNext) { %>
+                    <!--  && !level.xpLeftTo.map(x => x.level).includes(level.level + 1) -->
+                    <span class='stat-name'>Progress to <%= level.level + 1 %>:</span>
+                    <span class='stat-value'><%= Number((level.progress * 100).toFixed(2)).toLocaleString() %>%</span>
+                    <span class='stat-value'>(-<%= helper.formatNumber(level.xpForNext - level.xpCurrent, true).toLocaleString() %> XP)</span>
+                    <br>
                 <% } %>
 
-                <% if (
-                    // ['taming', 'farming', 'mining', 'combat', 'foraging', 'fishing', 'enchanting', 'alchemy'].includes(skill.toLowerCase()) &&
-                    level.level < 60
-                    ) { %>
-                    <span class='stat-name'>Progress to 60: </span>
-                    <span class='stat-value'><%= Math.max(0, Math.round(getXpByLevel(60, {skill}).xp - level.xp)).toLocaleString() %></span><br>
+                <% if (level.xpLeftTo) { %>
+                    <% level.xpLeftTo.forEach(cap => { %>
+                        <span class='stat-name'>Progress to <%= cap.level %>:</span>
+                        <span class='stat-value'><%= Number(cap.progressPrc.toFixed(2)).toLocaleString() %>%</span>
+                        <% if (cap.xpLeft > 0) { %>
+                            <span class='stat-value'>(-<%= helper.formatNumber(cap.xpLeft, true).toLocaleString() %> XP)</span>
+                        <% } %>
+                        <br>
+                    <% }) %>
                 <% } %>
             "
         >
+            <% if (level.xpLeftTo) { %>
             <script>
                 console.log('skill', JSON.parse(`<%- JSON.stringify(skill).replace(/\\/g, '\\\\') %>`))
-                console.log('icon', JSON.parse(`<%- JSON.stringify(icon).replace(/\\/g, '\\\\') %>`))
-                console.log('level', JSON.parse(`<%- JSON.stringify(level).replace(/\\/g, '\\\\') %>`))
-                console.log('extra', JSON.parse(`<%- JSON.stringify(extra).replace(/\\/g, '\\\\') %>`))
-                console.log('getXpByLevel', JSON.parse(`<%- JSON.stringify(getXpByLevel(50, {skill})).replace(/\\/g, '\\\\') %>`))
+                console.table(JSON.parse(`<%- JSON.stringify(level).replace(/\\/g, '\\\\') %>`))
                 console.log('------------------')
             </script>
+            <% } %>
             <% if(icon.startsWith('head-')){ %>
                 <div class="head-icon" style="background-image:url(/head/<%= icon.substring(5) %>)"></div>
             <% }else{ %>
