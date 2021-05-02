@@ -952,15 +952,14 @@ const skill_component = (skill, icon, level, extra = {}) => { %>
                 <% } %>
                 <span class='stat-name'>Total XP: </span><span class='stat-value'><%= Math.round(level.xp).toLocaleString() %></span><br>
 
-                <% if (level.xpLeftTo || level.xpForNext) { %>
+                <% if (level.xpLeftTo || level.xpForNext !== Infinity) { %>
                     <br>
                 <% } %>
 
-                <% if (level.xpForNext) { %>
-                    <!--  && !level.xpLeftTo.map(x => x.level).includes(level.level + 1) -->
+                <% if (level.xpForNext !== Infinity) { %>
                     <span class='stat-name'>Progress to <%= level.level + 1 %>:</span>
                     <span class='stat-value'><%= Number((level.progress * 100).toFixed(2)).toLocaleString() %>%</span>
-                    <span class='stat-value'>(-<%= helper.formatNumber(level.xpForNext - level.xpCurrent, true).toLocaleString() %> XP)</span>
+                    <span class='stat-name'>// <%= helper.formatNumber(level.xpForNext - level.xpCurrent, true).toLocaleString() %> XP left</span>
                     <br>
                 <% } %>
 
@@ -969,7 +968,7 @@ const skill_component = (skill, icon, level, extra = {}) => { %>
                         <span class='stat-name'>Progress to <%= cap.level %>:</span>
                         <span class='stat-value'><%= Number(cap.progressPrc.toFixed(2)).toLocaleString() %>%</span>
                         <% if (cap.xpLeft > 0) { %>
-                            <span class='stat-value'>(-<%= helper.formatNumber(cap.xpLeft, true).toLocaleString() %> XP)</span>
+                            <span class='stat-name'>// <%= helper.formatNumber(cap.xpLeft, true).toLocaleString() %> XP left</span>
                         <% } %>
                         <br>
                     <% }) %>
