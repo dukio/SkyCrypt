@@ -43,7 +43,7 @@ const rarity_order = ['special', 'mythic', 'legendary', 'epic', 'rare', 'uncommo
 
 const petTiers = ['common', 'uncommon', 'rare', 'epic', 'legendary', 'mythic'];
 
-const MAX_SOULS = 222;
+const MAX_SOULS = 227;
 let TALISMAN_COUNT;
 const level50SkillExp = 55172425;
 const level60SkillExp = 111672425;
@@ -821,19 +821,29 @@ function calcSkillWeight(skillGroup, level, experience){
     }
 }
 
-function calcSlayerWeight(type, experience){
-    const divider = constants.slayerWeight[type]
+function calcSlayerWeight(type, experience) {
+    const slayerWeight = constants.slayerWeight[type]
 
-    if (experience <= 1000000) {
+    if (!experience || experience <= 1000000) {
         return {
-            weight: experience == 0 ? 0 : experience / divider,
+            weight: !experience ? 0 : experience / slayerWeight.divider, // for some reason experience can be undefined
             weight_overflow: 0,
         }
     }
 
-    let base = 1000000 / divider
+    let base = 1000000 / slayerWeight.divider
     let remaining = experience - 1000000
-    let overflow = Math.pow(remaining / (divider * 1.5), 0.942)
+
+    let modifier = slayerWeight.modifier
+    let overflow = 0
+
+    while (remaining > 0) {
+        let left = Math.min(remaining, 1000000)
+
+        overflow += Math.pow(left / (slayerWeight.divider * (1.5 + modifier)), 0.942)
+        modifier += slayerWeight.modifier
+        remaining -= left
+    }
 
     return {
         weight: base,
@@ -1007,7 +1017,7 @@ module.exports = {
         return output;
     },
 
-    getItems: async (profile, customTextures = false, packs, options = { cacheOnly: false, debugId: "unknown/getItems" }) => {
+    getItems: async (profile, customTextures = false, packs, options = { cacheOnly: false, debugId: `${helper.getClusterId()}/unknown@getItems` }) => {
         const output = {};
 
         console.debug(`${options.debugId}: getItems called.`);
@@ -1637,7 +1647,7 @@ module.exports = {
         return output;
     },
 
-    getStats: async (db, profile, allProfiles, items, options = { cacheOnly: false, debugId: "unknown/getStats" }) => {
+    getStats: async (db, profile, allProfiles, items, options = { cacheOnly: false, debugId: `${helper.getClusterId()}/unknown@getStats` }) => {
         let output = {};
 
         console.debug(`${options.debugId}: getStats called.`);
@@ -1809,16 +1819,21 @@ module.exports = {
             output.stats[stat] += output.pet_bonus[stat];
 
         // Apply pet bonus to armor
-        if(activePet && Date.now() - userProfile.last_save >= 7 * 60 * 1000 /* change to 1000 - its one for testing; 7 minutes*/) {
-            // We know they are not online so apply pets to armor
-            activePet.ref.modifyArmor(items.armor[3], getId(items.armor[3]),
-                                    items.armor[2], getId(items.armor[2]),
-                                    items.armor[1], getId(items.armor[1]),
-                                    items.armor[0], getId(items.armor[0]));
-            loreGenerator.makeLore(items.armor[0]);
-            loreGenerator.makeLore(items.armor[1]);
-            loreGenerator.makeLore(items.armor[2]);
-            loreGenerator.makeLore(items.armor[3]);
+        if(activePet) {
+            activePet.ref.modifyArmor(
+                items.armor.find(a => a.type === 'helmet'),
+                getId(items.armor.find(a => a.type === 'helmet')),
+                items.armor.find(a => a.type === 'chestplate'),
+                getId(items.armor.find(a => a.type === 'chestplate')),
+                items.armor.find(a => a.type === 'leggings'),
+                getId(items.armor.find(a => a.type === 'leggings')),
+                items.armor.find(a => a.type === 'boots'),
+                getId(items.armor.find(a => a.type === 'boots'))
+            )
+            loreGenerator.makeLore(items.armor.find(a => a.type === 'helmet'))
+            loreGenerator.makeLore(items.armor.find(a => a.type === 'chestplate'))
+            loreGenerator.makeLore(items.armor.find(a => a.type === 'leggings'))
+            loreGenerator.makeLore(items.armor.find(a => a.type === 'boots'))
         }
 
         // Apply Lapis Armor full set bonus of +60 HP
@@ -1934,13 +1949,26 @@ module.exports = {
 
             // Apply Superior Dragon Armor full set bonus of 5% stat increase
             if(items.armor.filter(a => getId(a).startsWith('SUPERIOR_DRAGON_')).length == 4)
-                for(const stat in stats)
+                for(const stat in stats) {
+                    if (constants.increase_most_stats_exclude.includes(stat)) {
+                        continue
+                    }
                     stats[stat] *= 1.05;
+                }
 
             // Apply Renowened bonus (whoever made this please comment)
             for(let i = 0; i < items.armor.filter(a => helper.getPath(a, 'tag', 'ExtraAttributes', 'modifier') == 'renowned').length; i++){
-                for(const stat in stats)
+                for(const stat in stats) {
+                    if (constants.increase_most_stats_exclude.includes(stat)) {
+                        continue
+                    }
                     stats[stat] *= 1.01;
+                }
+            }
+
+            // Apply Loving reforge bonus
+            for(let i = 0; i < items.armor.filter(a => helper.getPath(a, 'tag', 'ExtraAttributes', 'modifier') == 'loving').length; i++){
+                stats['ability_damage'] += 5;
             }
 
             // Modify stats based off of pet ability
@@ -1969,8 +1997,12 @@ module.exports = {
 
         // Apply Superior Dragon Armor full set bonus of 5% stat increase
         if(items.armor.filter(a => getId(a).startsWith('SUPERIOR_DRAGON_')).length == 4){
-            for(const stat in output.stats)
+            for(const stat in output.stats) {
+                if (constants.increase_most_stats_exclude.includes(stat)) {
+                    continue
+                }
                 superiorBonus[stat] = output.stats[stat] * 0.05;
+            }
 
             for(const stat in superiorBonus){
                 output.stats[stat] += superiorBonus[stat];
@@ -1987,9 +2019,11 @@ module.exports = {
 
         for(const item of items.armor){
             if(helper.getPath(item, 'tag', 'ExtraAttributes', 'modifier') == 'renowned'){
-                for(const stat in output.stats){
+                for(const stat in output.stats) {
+                    if (constants.increase_most_stats_exclude.includes(stat)) {
+                        continue
+                    }
                     renownedBonus[stat] += output.stats[stat] * 0.01;
-
                     output.stats[stat] *= 1.01;
                 }
             }
@@ -2329,7 +2363,7 @@ module.exports = {
                         let tierValue = statKey.pop();
 
                         statKey = statKey.join('_');
-                        const tierInfo = constants.experiments.tiers[tierValue];
+                        const tierInfo = _.cloneDeep(constants.experiments.tiers[tierValue]);
 
                         if(!game_output.tiers[tierValue])
                             game_output.tiers[tierValue] = tierInfo;
@@ -3207,7 +3241,7 @@ module.exports = {
         return output;
     },
 
-    getProfile: async (db, paramPlayer, paramProfile, options = { cacheOnly: false, debugId: "unknown/getProfile" }) => {
+    getProfile: async (db, paramPlayer, paramProfile, options = { cacheOnly: false, debugId: `${helper.getClusterId()}/unknown@getProfile` }) => {
         console.debug(`${options.debugId}: getProfile called.`);
         const timeStarted = new Date().getTime();
 
