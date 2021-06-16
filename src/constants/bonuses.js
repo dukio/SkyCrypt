@@ -102,13 +102,25 @@ module.exports = {
       1: {
         health: 2,
       },
+      2: {
+        health: 2,
+      },
       3: {
+        health: 3,
+      },
+      4: {
         health: 3,
       },
       5: {
         health: 4,
       },
+      6: {
+        health: 4,
+      },
       7: {
+        health: 5,
+      },
+      8: {
         health: 5,
       },
       9: {
@@ -120,7 +132,19 @@ module.exports = {
       1: {
         crit_damage: 1,
       },
+      2: {
+        crit_damage: 1,
+      },
+      3: {
+        crit_damage: 1,
+      },
+      4: {
+        crit_damage: 1,
+      },
       5: {
+        crit_damage: 2,
+      },
+      6: {
         crit_damage: 2,
       },
       7: {
@@ -129,6 +153,9 @@ module.exports = {
       },
       8: {
         crit_chance: 0,
+        crit_damage: 3,
+      },
+      9: {
         crit_damage: 3,
       },
     },
@@ -158,9 +185,40 @@ module.exports = {
       8: {
         speed: 1,
       },
+      9: {
+        health: 5,
+      },
     },
 
-    enderman_slayer: {},
+    enderman_slayer: {
+      1: {
+        health: 1,
+      },
+      2: {
+        intelligence: 1,
+      },
+      3: {
+        health: 2,
+      },
+      4: {
+        intelligence: 2,
+      },
+      5: {
+        health: 3,
+      },
+      6: {
+        intelligence: 3,
+      },
+      7: {
+        health: 4,
+      },
+      8: {
+        intelligence: 4,
+      },
+      9: {
+        health: 5,
+      },
+    },
 
     enchantments: {
       sharpness: {
